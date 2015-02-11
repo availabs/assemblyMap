@@ -193,7 +193,7 @@
                             dist.district = '0'+dist.district;
                         }
                         d3.select('.district_'+dist.district).attr('fill','#f00')
-                        legHTML += dist.rep+'<br>';
+                        legHTML += dist.rep+', District '+dist.district+'<br>';
                     })
                     console.log(legList)
                     legList.html(legHTML);
