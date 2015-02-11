@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>US States</title>
+
+    <link rel="stylesheet" href="//leafletjs.com/dist/leaflet.css" />
+    <!--[if lte IE 8]>
+        <link rel="stylesheet" href="/static/leaflet/leaflet.ie.css" />
+    <![endif]-->
+    <script src="//leafletjs.com/dist/leaflet.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/d3/3.5.3/d3.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/topojson/1.6.9/topojson.min.js"></script>
+    
+    <style type="text/css">
+    html, body, #map {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+    }
+    #display{
+        position: absolute;
+        top:10px;
+        right:10px;
+        height:80%;
+        width:300px;
+        background-color: #fff;
+        z-index: 20;
+    }
+    </style>
+</head>
+
+<body>
+    <div id="map">
+        <div id="display"></div>
+    </div>
+    
+
+    <script type="text/javascript">
+    var map = new L.Map('map'),
+        cloudmadeUrl = 'http://{s}.tiles.mapbox.com/v3/am3081.h0pna3ah/{z}/{x}/{y}.png',
+        cloudmadeAttribution = '';
+    
+    map.setView(new L.LatLng(42.84375132629021,-75.7177734375), 7);
+
+    var baseLayer = new L.TileLayer(cloudmadeUrl, { attribution: cloudmadeAttribution});
+    map.addLayer(baseLayer);
+
+    d3.json('data/state-assembly.json',function(err,data){
+        //console.log(err,data);
+            
+            if (data.type == "Topology") {
+                for(var key in data.objects){
+                  data = topojson.feature(data, data.objects[key]);
+                } 
+            }
+
+            stateLayer = L.geoJson(data, {
+                style: function (feature) {
+                  return {
+                    stroke:true,
+                    weight:1,
+                    className:'district_'+feature.properties.DISTRICT
+                  };
+                },
+                onEachFeature: function (feature, layer) {
+                    if (feature.properties) {
+                        // TODO disabled due to error with Leaflet master (0.8-dev)
+                        //layer.bindLabel(feature.properties.name);
+                        var popupString = '<div class="popup">';
+                                for (var k in feature.properties) {
+                                    var v = feature.properties[k];
+                                    popupString += k + ': ' + v + '<br />';
+                                }
+                                popupString += '</div>';
+                        layer.bindPopup(popupString);
+                    }
+                    layer.on({
+                        //click: scope.stateClick,
+                        //mouseover: function(e){
+                        //     var layer = e.target;
+                        //         layer.setStyle({
+                        //             fillOpacity:0.7
+                        //         });
+                            
+                        // },
+                        // mouseout: function(e){
+                        //      var layer = e.target;
+                        //      layer.setStyle({
+                                
+                        //         fillOpacity:0.3
+                        //       });
+                        // }
+                    });
+
+
+                }
+            })
+            stateLayer.addTo(map);
+    })
+    // d3.json('data/counties.json',function(err,data){
+    //     //console.log(err,data);
+            
+    //         if (data.type == "Topology") {
+    //             for(var key in data.objects){
+    //               data = topojson.feature(data, data.objects[key]);
+    //             } 
+    //         }
+
+    //         data.features = data.features.filter(function(d){
+    //             return d.properties.geoid.substring(0,2) == '36'
+    //         })
+
+    //         stateLayer = L.geoJson(data, {
+    //             style: function (feature) {
+    //               return {
+    //                 stroke:true,
+    //                 fillOpacity:0.0,
+    //                 weight:1,
+    //                 fillColor:'#ccc',
+    //                 color:'#f00'
+    //               };
+    //             },
+    //             onEachFeature: function (feature, layer) {
+    //                 if (feature.properties) {
+    //                     // TODO disabled due to error with Leaflet master (0.8-dev)
+    //                     //layer.bindLabel(feature.properties.name);
+    //                     var popupString = '<div class="popup">';
+    //                             for (var k in feature.properties) {
+    //                                 var v = feature.properties[k];
+    //                                 popupString += k + ': ' + v + '<br />';
+    //                             }
+    //                             popupString += '</div>';
+    //                     layer.bindPopup(popupString);
+    //                 }
+    //                 layer.on({
+    //                     //click: scope.stateClick,
+    //                     mouseover: function(e){
+    //                         var layer = e.target;
+    //                         if(layer._path.className.baseVal.split(' ').indexOf('active_geo') < 0){
+    //                             layer.setStyle({
+    //                                 fillOpacity:0.7
+    //                             });
+    //                         }
+
+    //                     },
+    //                     mouseout: function(e){
+    //                          var layer = e.target;
+    //                          layer.setStyle({
+                                
+    //                             fillOpacity:0.3
+    //                           });
+    //                     }
+    //                 });
+
+
+    //             }
+    //         })
+    //         //stateLayer.addTo(map);
+    // })
+    d3.csv('data/commities.csv',function(data){
+        console.log(data);
+        var commities = {};
+        var districts = [];
+        data.forEach(function(d){
+            d.Committee.split(';').forEach(function(commity){
+                if(!commities[commity]){ commities[commity] = [] }
+                commities[commity].push({'district':d.District,'rep':d.Legislator})
+            });
+            districts.push({'district':d.District,'rep':d.Legislator});
+        })
+        console.log(commities);
+
+        var comList = d3.select('#display')
+            .append('ul')
+            .attr('class','comList');
+
+
+        var legList = d3.select('#display')
+            .append('div');
+
+        Object.keys(commities).forEach(function(d){
+            comList.append('li')
+                .text(d)
+                .on('click',function(){
+                    
+                    districts.forEach(function(dist){
+                        d3.select('.district_'+dist.district).attr('fill','#0033ff')
+                    });
+                    var legHTML = ''
+                    commities[d].forEach(function(dist){
+                        if(dist.district.length == 2){
+                            dist.district = '0'+dist.district;
+                        }
+                        d3.select('.district_'+dist.district).attr('fill','#f00')
+                        legHTML += dist.rep+'<br>';
+                    })
+                    console.log(legList)
+                    legList.html(legHTML);
+                })
+        })
+        
+    })
+
+   
+    </script>
+</body>
+</html>
